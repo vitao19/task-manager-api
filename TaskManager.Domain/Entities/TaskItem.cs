@@ -1,4 +1,6 @@
-﻿namespace TaskManager.Domain.Entities
+﻿using TaskManager.Domain.Enums;
+
+namespace TaskManager.Domain.Entities
 {
     public class TaskItem
     {
@@ -7,11 +9,11 @@
         public string Title { get; private set; }
         public string? Description { get; private set; }
         public DateTime? DueDate { get; private set; }
-        public TaskStatus Status { get; private set; }
+        public TaskItemStatus Status { get; private set; }
         #endregion
 
         #region Constructors
-        public TaskItem(string title, string? description, DateTime? dueDate, TaskStatus status)
+        public TaskItem(string title, string? description, DateTime? dueDate, TaskItemStatus status)
         {
             Id = Guid.NewGuid();
             Title = title;
@@ -22,7 +24,7 @@
         #endregion
 
         #region Public Methods
-        public void Update(string title, string? description, DateTime? dueDate, TaskStatus status)
+        public void Update(string title, string? description, DateTime? dueDate, TaskItemStatus status)
         {
             Title = title;
             Description = description;

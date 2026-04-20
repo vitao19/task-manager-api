@@ -1,4 +1,9 @@
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using TaskManager.Application.Interfaces;
+using TaskManager.Application.Mappings;
+using TaskManager.Application.Services;
+using TaskManager.Application.Validators;
 using TaskManager.Domain.Interfaces;
 using TaskManager.Infrastructure.Context;
 using TaskManager.Infrastructure.Repositories;
@@ -9,11 +14,19 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseInMemoryDatabase("TaskManagerDb"));
 
-// 2. Registra o Repositório e Unit of Work (Padrão Híbrido)
+// 2. Registra Repositório, Unit of Work e Service
 builder.Services.AddScoped<ITaskRepository, TaskRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<ITaskService, TaskService>();
 
-// 4. Configura Controllers e Swagger
+// 3. Configura o AutoMapper
+builder.Services.AddAutoMapper(typeof(MappingProfile));
+
+// 4. Configura o FluentValidation
+builder.Services.AddValidatorsFromAssemblyContaining<TaskCreateValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<TaskUpdateValidator>();
+
+// 5. Configura Controllers e Swagger
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
