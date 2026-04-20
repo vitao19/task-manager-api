@@ -1,6 +1,11 @@
+using Microsoft.EntityFrameworkCore;
+using TaskManager.Infrastructure.Context;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// 1. Configura o Banco em Memória
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseInMemoryDatabase("TaskManagerDb"));
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
