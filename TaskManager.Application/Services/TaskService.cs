@@ -42,44 +42,63 @@ namespace TaskManager.Application.Services
         }
         #endregion
 
-        #region Write Operations (Usa Repository + UoW)
+        #region Write Operations
         public async Task<TaskResponseDto> CreateAsync(CreateTaskDto dto)
         {
-            // 1. Validação
             var validationResult = await _validator.ValidateAsync(dto);
             if (!validationResult.IsValid)
-                throw new ValidationException(validationResult.Errors); 
+                throw new ValidationException(validationResult.Errors);
 
-            // 2. Mapeamento
-            var task = new TaskItem(dto.Title, dto.Description, dto.DueDate, dto.Status);
+            var description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description;
+                        
+            var task = new TaskItem(
+                dto.Title,
+                description,
+                dto.DueDate,
+                dto.Status!.Value 
+            );
 
-            // 3. Persistência
             await _repository.AddAsync(task);
             await _uow.CommitAsync();
 
-            // 4. Retorno mapeado
             return _mapper.Map<TaskResponseDto>(task);
         }
 
         public async Task<bool> UpdateAsync(Guid id, UpdateTaskDto dto)
         {
-            // 1. Validação dos dados de entrada
             var validationResult = await _updateValidator.ValidateAsync(dto);
             if (!validationResult.IsValid)
                 throw new ValidationException(validationResult.Errors);
 
-            // 2. Busca a tarefa existente
             var task = await _repository.GetByIdAsync(id);
-            if (task == null) return false;
+            if (task == null)
+                return false;
 
-            // 3. Atualiza o estado da entidade (Lógica de Domínio)
-            task.Update(dto.Title, dto.Description, dto.DueDate, dto.Status);
+            var description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description;
 
-            // 4. Persistência
+            task.Update(
+                dto.Title,
+                description,
+                dto.DueDate,
+                dto.Status!.Value
+            );
+
             _repository.Update(task);
             await _uow.CommitAsync();
 
             return true;
+        }
+
+        public async Task<bool> DeleteAsync(Guid id)
+        {
+            var task = await _repository.GetByIdAsync(id);
+
+            if (task == null)
+                return false;
+
+            _repository.Delete(task);
+
+            return await _uow.CommitAsync();
         }
         #endregion
     }

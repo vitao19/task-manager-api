@@ -1,5 +1,7 @@
 using FluentValidation;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using TaskManager.API.Filters;
 using TaskManager.Application.Interfaces;
 using TaskManager.Application.Mappings;
 using TaskManager.Application.Services;
@@ -10,42 +12,79 @@ using TaskManager.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Configura o Banco em Memória
+#region 1. Configuração de Serviços (DI)
+
+// Banco de Dados em Memória
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseInMemoryDatabase("TaskManagerDb"));
 
-// 2. Registra Repositório, Unit of Work e Service
+// Repositórios e Unit of Work (Padrão Híbrido)
 builder.Services.AddScoped<ITaskRepository, TaskRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+// Serviço de Negócio
 builder.Services.AddScoped<ITaskService, TaskService>();
 
-// 3. Configura o AutoMapper
+// AutoMapper (Configurado para ler o perfil de mapeamento)
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
-// 4. Configura o FluentValidation
+// FluentValidation (Registra todos os validators do Assembly da Application)
 builder.Services.AddValidatorsFromAssemblyContaining<TaskCreateValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<TaskUpdateValidator>();
 
-// 5. Configura Controllers e Swagger
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
+// Controllers com customização de erro de validação (FluentValidation)
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var errors = context.ModelState.Values
+                .SelectMany(v => v.Errors)
+                .Select(e => {
+                    if (e.Exception is System.Text.Json.JsonException || e.ErrorMessage.Contains("could not be converted"))
+                        return "Formato de dado inválido. Verifique se o Status ou Data estão corretos.";
 
-builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+                    return e.ErrorMessage;
+                });
+
+            return new BadRequestObjectResult(new { Errors = errors });
+        };
+    });
+
+// Configuração do Swagger
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+#endregion
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+#region 2. Pipeline de Requisição (Middlewares)
+
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+// Ativa Swagger apenas no ambiente de desenvolvimento
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "TaskManager API v1");
+    });
 }
 
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
+// Mapeia os endpoints dos Controllers para as rotas da API
 app.MapControllers();
 
+app.MapGet("/", context => {
+    context.Response.Redirect("/swagger");
+    return Task.CompletedTask;
+});
+
 app.Run();
+
+#endregion

@@ -1,7 +1,4 @@
 ﻿using FluentValidation;
-using System;
-using System.Collections.Generic;
-using System.Text;
 using TaskManager.Application.DTOs.TaskDtos;
 
 namespace TaskManager.Application.Validators
@@ -15,10 +12,11 @@ namespace TaskManager.Application.Validators
                 .MaximumLength(100).WithMessage("O título deve ter no máximo 150 caracteres.");
 
             RuleFor(x => x.Description)
-               .MaximumLength(500).WithMessage("A Descrição deve ter no máximo 500 caracteres.");
+                .MaximumLength(500).WithMessage("A Descrição deve ter no máximo 500 caracteres.");
 
             RuleFor(x => x.Status)
-                .IsInEnum().WithMessage("Status inválido.");
+                .NotNull().WithMessage("O status é obrigatório.")
+                .IsInEnum().WithMessage("Status inválido. Escolha: 1 (Pendente), 2 (Em progresso) ou 3 (Concluída).");
         }
     }
 }
