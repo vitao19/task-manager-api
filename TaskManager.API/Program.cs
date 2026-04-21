@@ -55,11 +55,23 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("DefaultPolicy", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 #endregion
 
 var app = builder.Build();
 
 #region 2. Pipeline de Requisição (Middlewares)
+
+app.UseCors("DefaultPolicy");
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
