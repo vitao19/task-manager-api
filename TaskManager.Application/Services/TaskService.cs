@@ -5,6 +5,7 @@ using TaskManager.Application.Interfaces;
 using TaskManager.Domain.Entities;
 using TaskManager.Domain.Enums;
 using TaskManager.Domain.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace TaskManager.Application.Services
 {
@@ -13,18 +14,24 @@ namespace TaskManager.Application.Services
         private readonly ITaskRepository _repository;
         private readonly IUnitOfWork _uow;
         private readonly IMapper _mapper;
+        private readonly ILogger<TaskService> _logger;
         private readonly IValidator<CreateTaskDto> _validator;
         private readonly IValidator<UpdateTaskDto> _updateValidator;
 
         public TaskService(
-            ITaskRepository repository, IUnitOfWork uow, IMapper mapper, 
-            IValidator<CreateTaskDto> validator, IValidator<UpdateTaskDto> updateValidator)
+            ITaskRepository repository,
+            IUnitOfWork uow,
+            ILogger<TaskService> logger,
+            IValidator<CreateTaskDto> validator,
+            IValidator<UpdateTaskDto> updateValidator,
+            IMapper mapper)
         {
             _repository = repository;
             _uow = uow;
-            _mapper = mapper;
+            _logger = logger;
             _validator = validator;
             _updateValidator = updateValidator;
+            _mapper = mapper;
         }
 
         #region Read Operations 
@@ -45,60 +52,97 @@ namespace TaskManager.Application.Services
         #region Write Operations
         public async Task<TaskResponseDto> CreateAsync(CreateTaskDto dto)
         {
-            var validationResult = await _validator.ValidateAsync(dto);
-            if (!validationResult.IsValid)
-                throw new ValidationException(validationResult.Errors);
+            try
+            {
+                _logger.LogInformation("Iniciando criação da tarefa: {Title}", dto.Title);
 
-            var description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description;
-                        
-            var task = new TaskItem(
-                dto.Title,
-                description,
-                dto.DueDate,
-                dto.Status!.Value 
-            );
+                var validationResult = await _validator.ValidateAsync(dto);
+                if (!validationResult.IsValid)
+                    throw new ValidationException(validationResult.Errors);
 
-            await _repository.AddAsync(task);
-            await _uow.CommitAsync();
+                var description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description;
 
-            return _mapper.Map<TaskResponseDto>(task);
+                var task = new TaskItem(
+                    dto.Title,
+                    description,
+                    dto.DueDate,
+                    dto.Status!.Value
+                );
+
+                await _repository.AddAsync(task);
+                await _uow.CommitAsync();
+
+                _logger.LogInformation("Tarefa criada com sucesso!");
+
+                return _mapper.Map<TaskResponseDto>(task);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao criar tarefa: {Message}", ex.Message);
+                throw;
+            }
         }
 
         public async Task<bool> UpdateAsync(Guid id, UpdateTaskDto dto)
         {
-            var validationResult = await _updateValidator.ValidateAsync(dto);
-            if (!validationResult.IsValid)
-                throw new ValidationException(validationResult.Errors);
+            try
+            {
+                _logger.LogInformation("Iniciando atualização da tarefa: {Title}", dto.Title);
 
-            var task = await _repository.GetByIdAsync(id);
-            if (task == null)
-                return false;
+                var validationResult = await _updateValidator.ValidateAsync(dto);
+                if (!validationResult.IsValid)
+                    throw new ValidationException(validationResult.Errors);
 
-            var description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description;
+                var task = await _repository.GetByIdAsync(id);
+                if (task == null)
+                    return false;
 
-            task.Update(
-                dto.Title,
-                description,
-                dto.DueDate,
-                dto.Status!.Value
-            );
+                var description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description;
 
-            _repository.Update(task);
-            await _uow.CommitAsync();
+                task.Update(
+                    dto.Title,
+                    description,
+                    dto.DueDate,
+                    dto.Status!.Value
+                );
 
-            return true;
+                _repository.Update(task);
+                await _uow.CommitAsync();
+
+                _logger.LogInformation("Tarefa atualizada com sucesso!");
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao atualizar tarefa: {Message}", ex.Message);
+                throw;
+            }
         }
 
         public async Task<bool> DeleteAsync(Guid id)
         {
-            var task = await _repository.GetByIdAsync(id);
+            try
+            {
+                _logger.LogWarning("Tentando excluir a tarefa com ID: {Id}", id);
 
-            if (task == null)
-                return false;
+                var task = await _repository.GetByIdAsync(id);
 
-            _repository.Delete(task);
+                if (task == null)
+                    return false;
 
-            return await _uow.CommitAsync();
+                _repository.Delete(task);
+
+                _logger.LogInformation("Tarefa deletada com sucesso!");
+
+                return await _uow.CommitAsync();
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao deletar tarefa: {Message}", ex.Message);
+                throw;
+            }
         }
         #endregion
     }
