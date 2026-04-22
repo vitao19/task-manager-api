@@ -58,6 +58,47 @@ Filtros disponíveis:
 - status
 - data de vencimento
 
+## Regras de Validação e Contrato da API
+
+### Campos da Tarefa
+
+- **title**
+  - obrigatório
+  - máximo: 150 caracteres
+
+- **description**
+  - opcional
+  - máximo: 500 caracteres
+
+- **dueDate**
+  - opcional
+  - formato: ISO 8601 (ex: 2026-04-22T18:00:00Z)
+
+- **status**
+  - obrigatório
+  - valores aceitos:
+    - 1 = Pendente
+    - 2 = Em progresso
+    - 3 = Concluída
+
+---
+
+### Comportamento da API
+
+- **POST**
+  - valida campos obrigatórios
+  - não permite dados inválidos
+
+- **PUT**
+  - realiza substituição completa do recurso
+  - campos não enviados são persistidos como `null`
+
+- **GET**
+  - retorna `200 OK` com lista vazia (`[]`) quando não há dados
+
+- **DELETE**
+  - retorna `204 No Content` quando removido com sucesso
+
 ## Observações
 
 - O banco de dados é em memória, portanto os dados são resetados ao reiniciar a aplicação.
