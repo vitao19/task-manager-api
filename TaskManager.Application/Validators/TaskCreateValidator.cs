@@ -9,7 +9,7 @@ namespace TaskManager.Application.Validators
         {
             RuleFor(x => x.Title)
                 .NotEmpty().WithMessage("O título é obrigatório.")
-                .MaximumLength(100).WithMessage("O título deve ter no máximo 150 caracteres.");
+                .MaximumLength(150).WithMessage("O título deve ter no máximo 150 caracteres.");
 
             RuleFor(x => x.Description)
                 .MaximumLength(500).WithMessage("A Descrição deve ter no máximo 500 caracteres.");
